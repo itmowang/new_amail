@@ -1,0 +1,58 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite" // d1 is sql base database
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String
+  createdAt DateTime @default(now())
+
+  sentEmails Email[]    @relation("SentEmails")
+  drafts     Draft[]
+  favorites  Favorite[]
+}
+
+model Email {
+  id        String   @id @default(uuid())
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  senderId  String
+  sender    User     @relation("SentEmails", fields: [senderId], references: [id])
+  recipients EmailRecipient[]
+  favorites  Favorite[]
+}
+
+model EmailRecipient {
+  id             String @id @default(uuid())
+  emailId        String
+  recipientEmail String
+  email          Email  @relation(fields: [emailId], references: [id])
+}
+
+model Draft {
+  id        String   @id @default(uuid())
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Favorite {
+  id      String @id @default(uuid())
+  userId  String
+  emailId String
+  user    User   @relation(fields: [userId], references: [id])
+  email   Email  @relation(fields: [emailId], references: [id])
+
+  @@unique([userId, emailId])
+}

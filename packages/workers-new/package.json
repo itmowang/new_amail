@@ -1,0 +1,26 @@
+{
+  "name": "@amail/workers",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx wrangler dev main.ts",
+    "deploys": "npx  tsc && npx wrangler deploy "
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prisma": "^6.8.2",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.22.0"
+  },
+  "dependencies": {
+    "@prisma/adapter-d1": "^6.8.2",
+    "@prisma/client": "^6.8.2",
+    "bcryptjs": "^3.0.2",
+    "hono": "^4.5.10",
+    "postal-mime": "^2.4.4",
+    "vm": "^0.1.0"
+  }
+}

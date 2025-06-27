@@ -1,0 +1,22 @@
+{
+  "name": "amail",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -C ./packages/web deploys && pnpm -C ./packages/workers deploys"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "mit",
+  "dependencies": {
+    "@amail/web": "workspace:^",
+    "@amail/workers": "workspace:^",
+    "typescript": "^5.5.4"
+  },
+  "packageManager": "pnpm@9.1.4+sha1.2432063d815cfa88fd9fef1d85a445e3f609851d"
+}
