@@ -69,26 +69,7 @@ export default {
       })
 
       console.log(sender,"查询发送者");
-      
-      if (sender) {
-        await prisma.email.create({
-          data: {
-            subject: 'Hello with recipients',
-            body: 'This email has recipients!',
-            senderId: sender.id,
-            recipients: {
-              create: [
-                { recipientEmail: 'recipient1@example.com' },
-                { recipientEmail: 'recipient2@example.com' },
-              ],
-            },
-          },
-        });
-      }else{
-        console.log(`收件人不存在: ${email.to}`);
-        console.log(email);
-        
-      }
+     
 
     } catch (err: any) {
       console.error('邮件处理失败:', {
@@ -99,12 +80,6 @@ export default {
       throw err;
     }
 
-    // const inboxJSON = (await env.amailkv.get(message.to)) || "[]";
-    // const inbox = JSON.parse(inboxJSON);
-    // await inbox.push(email);
-    // await env.amailkv.put(message.to, JSON.stringify(inbox), {
-    //   expirationTtl: env.EMAIL_TIMEOUT,
-    // });
   },
 };
 

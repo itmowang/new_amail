@@ -9,50 +9,39 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  password  String
-  createdAt DateTime @default(now())
-
-  sentEmails Email[]    @relation("SentEmails")
-  drafts     Draft[]
-  favorites  Favorite[]
+  id        String   @id @default(uuid()) // 用户id
+  email     String   @unique // 用户邮箱
+  name      String? // 用户昵称
+  password  String // 用户密码 
+  createdAt DateTime @default(now()) // 创建时间
 }
 
 model Email {
-  id        String   @id @default(uuid())
-  subject   String
-  body      String
-  createdAt DateTime @default(now())
-  senderId  String
-  sender    User     @relation("SentEmails", fields: [senderId], references: [id])
-  recipients EmailRecipient[]
-  favorites  Favorite[]
+  id             String   @id @default(uuid()) // 邮件id
+  subject        String // 邮件主题
+  body           String // 邮件内容
+  recipientEmail String // 收信人邮箱
+  createdAt      DateTime @default(now()) //邮件创建时间
 }
 
-model EmailRecipient {
-  id             String @id @default(uuid())
-  emailId        String
-  recipientEmail String
-  email          Email  @relation(fields: [emailId], references: [id])
+model Domain {
+  id        String   @id @default(uuid()) // 域名id
+  name      String // 域名地址 例如 example.com
+  createdAt DateTime @default(now()) // 域名创建时间
 }
 
-model Draft {
-  id        String   @id @default(uuid())
-  subject   String
-  body      String
-  createdAt DateTime @default(now())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+model UserEmailDomain {
+  id        String   @id @default(uuid()) //  用户的邮箱
+  userId    String // 用户id
+  domainId  String // 域名id
+  emailName String // 邮箱Name   例如Alice  到时候可以拼接Domain的name 形成完整的邮箱 例如 Alice@example.com
+  createdAt DateTime @default(now()) // 创建时间
 }
 
-model Favorite {
-  id      String @id @default(uuid())
-  userId  String
-  emailId String
-  user    User   @relation(fields: [userId], references: [id])
-  email   Email  @relation(fields: [emailId], references: [id])
-
-  @@unique([userId, emailId])
+model Points {
+  id        String   @id @default(uuid()) // id
+  userId    String // 用户id
+  points    Int // 积分
+  createdAt DateTime @default(now()) // 创建时间
+  updatedAt DateTime @default(now()) // 更新时间
 }

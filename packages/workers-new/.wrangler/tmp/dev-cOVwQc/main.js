@@ -5912,25 +5912,27 @@ var require_wasm2 = __commonJS({
       id: "id",
       subject: "subject",
       body: "body",
-      createdAt: "createdAt",
-      senderId: "senderId"
+      recipientEmail: "recipientEmail",
+      createdAt: "createdAt"
     };
-    exports.Prisma.EmailRecipientScalarFieldEnum = {
+    exports.Prisma.DomainScalarFieldEnum = {
       id: "id",
-      emailId: "emailId",
-      recipientEmail: "recipientEmail"
+      name: "name",
+      createdAt: "createdAt"
     };
-    exports.Prisma.DraftScalarFieldEnum = {
-      id: "id",
-      subject: "subject",
-      body: "body",
-      createdAt: "createdAt",
-      userId: "userId"
-    };
-    exports.Prisma.FavoriteScalarFieldEnum = {
+    exports.Prisma.UserEmailDomainScalarFieldEnum = {
       id: "id",
       userId: "userId",
-      emailId: "emailId"
+      domainId: "domainId",
+      emailName: "emailName",
+      createdAt: "createdAt"
+    };
+    exports.Prisma.PointsScalarFieldEnum = {
+      id: "id",
+      userId: "userId",
+      points: "points",
+      createdAt: "createdAt",
+      updatedAt: "updatedAt"
     };
     exports.Prisma.SortOrder = {
       asc: "asc",
@@ -5943,9 +5945,9 @@ var require_wasm2 = __commonJS({
     exports.Prisma.ModelName = {
       User: "User",
       Email: "Email",
-      EmailRecipient: "EmailRecipient",
-      Draft: "Draft",
-      Favorite: "Favorite"
+      Domain: "Domain",
+      UserEmailDomain: "UserEmailDomain",
+      Points: "Points"
     };
     var config = {
       "generator": {
@@ -5993,12 +5995,12 @@ var require_wasm2 = __commonJS({
           }
         }
       },
-      "inlineSchema": 'generator client {\n  provider        = "prisma-client-js"\n  previewFeatures = ["driverAdapters"]\n}\n\ndatasource db {\n  provider = "sqlite" // d1 is sql base database\n  url      = env("DATABASE_URL")\n}\n\nmodel User {\n  id        String   @id @default(uuid())\n  email     String   @unique\n  name      String?\n  password  String\n  createdAt DateTime @default(now())\n\n  sentEmails Email[]    @relation("SentEmails")\n  drafts     Draft[]\n  favorites  Favorite[]\n}\n\nmodel Email {\n  id        String   @id @default(uuid())\n  subject   String\n  body      String\n  createdAt DateTime @default(now())\n  senderId  String\n  sender    User     @relation("SentEmails", fields: [senderId], references: [id])\n\n  recipients EmailRecipient[]\n  favorites  Favorite[]\n}\n\nmodel EmailRecipient {\n  id             String @id @default(uuid())\n  emailId        String\n  recipientEmail String\n  email          Email  @relation(fields: [emailId], references: [id])\n}\n\nmodel Draft {\n  id        String   @id @default(uuid())\n  subject   String\n  body      String\n  createdAt DateTime @default(now())\n  userId    String\n  user      User     @relation(fields: [userId], references: [id])\n}\n\nmodel Favorite {\n  id      String @id @default(uuid())\n  userId  String\n  emailId String\n  user    User   @relation(fields: [userId], references: [id])\n  email   Email  @relation(fields: [emailId], references: [id])\n\n  @@unique([userId, emailId])\n}\n',
-      "inlineSchemaHash": "e524bb5a6ca32d9b60d53b57d393d2795d06eb708f9f6d0c5cb6bdfbde67416c",
+      "inlineSchema": 'generator client {\n  provider        = "prisma-client-js"\n  previewFeatures = ["driverAdapters"]\n}\n\ndatasource db {\n  provider = "sqlite" // d1 is sql base database\n  url      = env("DATABASE_URL")\n}\n\nmodel User {\n  id        String   @id @default(uuid()) // \u7528\u6237id\n  email     String   @unique // \u7528\u6237\u90AE\u7BB1\n  name      String? // \u7528\u6237\u6635\u79F0\n  password  String // \u7528\u6237\u5BC6\u7801 \n  createdAt DateTime @default(now()) // \u521B\u5EFA\u65F6\u95F4\n}\n\nmodel Email {\n  id             String   @id @default(uuid()) // \u90AE\u4EF6id\n  subject        String // \u90AE\u4EF6\u4E3B\u9898\n  body           String // \u90AE\u4EF6\u5185\u5BB9\n  recipientEmail String // \u6536\u4FE1\u4EBA\u90AE\u7BB1\n  createdAt      DateTime @default(now()) //\u90AE\u4EF6\u521B\u5EFA\u65F6\u95F4\n}\n\nmodel Domain {\n  id        String   @id @default(uuid()) // \u57DF\u540Did\n  name      String // \u57DF\u540D\u5730\u5740 \u4F8B\u5982 example.com\n  createdAt DateTime @default(now()) // \u57DF\u540D\u521B\u5EFA\u65F6\u95F4\n}\n\nmodel UserEmailDomain {\n  id        String   @id @default(uuid()) //  \u7528\u6237\u7684\u90AE\u7BB1\n  userId    String // \u7528\u6237id\n  domainId  String // \u57DF\u540Did\n  emailName String // \u90AE\u7BB1Name   \u4F8B\u5982Alice  \u5230\u65F6\u5019\u53EF\u4EE5\u62FC\u63A5Domain\u7684name \u5F62\u6210\u5B8C\u6574\u7684\u90AE\u7BB1 \u4F8B\u5982 Alice@example.com\n  createdAt DateTime @default(now()) // \u521B\u5EFA\u65F6\u95F4\n}\n\nmodel Points {\n  id        String   @id @default(uuid()) // id\n  userId    String // \u7528\u6237id\n  points    Int // \u79EF\u5206\n  createdAt DateTime @default(now()) // \u521B\u5EFA\u65F6\u95F4\n  updatedAt DateTime @default(now()) // \u66F4\u65B0\u65F6\u95F4\n}\n',
+      "inlineSchemaHash": "6d0e4e8e79b1df8cbcf2d6a78a9de6bb84473c50a847e68fd956943f6c735379",
       "copyEngine": true
     };
     config.dirname = "/";
-    config.runtimeDataModel = JSON.parse('{"models":{"User":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"email","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"password","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"sentEmails","kind":"object","type":"Email","relationName":"SentEmails"},{"name":"drafts","kind":"object","type":"Draft","relationName":"DraftToUser"},{"name":"favorites","kind":"object","type":"Favorite","relationName":"FavoriteToUser"}],"dbName":null},"Email":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"subject","kind":"scalar","type":"String"},{"name":"body","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"senderId","kind":"scalar","type":"String"},{"name":"sender","kind":"object","type":"User","relationName":"SentEmails"},{"name":"recipients","kind":"object","type":"EmailRecipient","relationName":"EmailToEmailRecipient"},{"name":"favorites","kind":"object","type":"Favorite","relationName":"EmailToFavorite"}],"dbName":null},"EmailRecipient":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"emailId","kind":"scalar","type":"String"},{"name":"recipientEmail","kind":"scalar","type":"String"},{"name":"email","kind":"object","type":"Email","relationName":"EmailToEmailRecipient"}],"dbName":null},"Draft":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"subject","kind":"scalar","type":"String"},{"name":"body","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"userId","kind":"scalar","type":"String"},{"name":"user","kind":"object","type":"User","relationName":"DraftToUser"}],"dbName":null},"Favorite":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"userId","kind":"scalar","type":"String"},{"name":"emailId","kind":"scalar","type":"String"},{"name":"user","kind":"object","type":"User","relationName":"FavoriteToUser"},{"name":"email","kind":"object","type":"Email","relationName":"EmailToFavorite"}],"dbName":null}},"enums":{},"types":{}}');
+    config.runtimeDataModel = JSON.parse('{"models":{"User":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"email","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"password","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"}],"dbName":null},"Email":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"subject","kind":"scalar","type":"String"},{"name":"body","kind":"scalar","type":"String"},{"name":"recipientEmail","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"}],"dbName":null},"Domain":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"}],"dbName":null},"UserEmailDomain":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"userId","kind":"scalar","type":"String"},{"name":"domainId","kind":"scalar","type":"String"},{"name":"emailName","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"}],"dbName":null},"Points":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"userId","kind":"scalar","type":"String"},{"name":"points","kind":"scalar","type":"Int"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"}],"dbName":null}},"enums":{},"types":{}}');
     defineDmmfProperty2(exports.Prisma, config.runtimeDataModel);
     config.engineWasm = {
       getRuntime: /* @__PURE__ */ __name(async () => require_query_engine_bg(), "getRuntime"),
@@ -6048,10 +6050,10 @@ var require_crypto = __commonJS({
   }
 });
 
-// .wrangler/tmp/bundle-SphCFs/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-jDBsIM/middleware-loader.entry.ts
 init_modules_watch_stub();
 
-// .wrangler/tmp/bundle-SphCFs/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-jDBsIM/middleware-insertion-facade.js
 init_modules_watch_stub();
 
 // main.ts
@@ -12155,14 +12157,7 @@ var mail_default = /* @__PURE__ */ __name((app2, path) => {
         prisma.email.findMany({
           orderBy: { createdAt: "desc" },
           skip: skip2,
-          take: pageSize,
-          include: {
-            sender: {
-              select: { id: true, email: true, name: true }
-            },
-            recipients: true,
-            favorites: true
-          }
+          take: pageSize
         }),
         prisma.email.count()
       ]);
@@ -14570,24 +14565,6 @@ var main_default = {
         where: { email: email.to }
       });
       console.log(sender, "\u67E5\u8BE2\u53D1\u9001\u8005");
-      if (sender) {
-        await prisma.email.create({
-          data: {
-            subject: "Hello with recipients",
-            body: "This email has recipients!",
-            senderId: sender.id,
-            recipients: {
-              create: [
-                { recipientEmail: "recipient1@example.com" },
-                { recipientEmail: "recipient2@example.com" }
-              ]
-            }
-          }
-        });
-      } else {
-        console.log(`\u6536\u4EF6\u4EBA\u4E0D\u5B58\u5728: ${email.to}`);
-        console.log(email);
-      }
     } catch (err) {
       console.error("\u90AE\u4EF6\u5904\u7406\u5931\u8D25:", {
         name: err.name,
@@ -14642,7 +14619,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-SphCFs/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-jDBsIM/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -14675,7 +14652,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-SphCFs/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-jDBsIM/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

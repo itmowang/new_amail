@@ -28,13 +28,6 @@ export default (app: Hono<{ Bindings: Bindings }>, path: string) => {
           orderBy: { createdAt: "desc" },
           skip,
           take: pageSize,
-          include: {
-            sender: {
-              select: { id: true, email: true, name: true },
-            },
-            recipients: true,
-            favorites: true,
-          },
         }),
         prisma.email.count(),
       ]);
