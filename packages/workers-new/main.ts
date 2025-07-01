@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import mail from "./src/mail";
 import user from './src/user';
-import test from './src/test';
+import domain from './src/domain'
 import { HTTPException } from "hono/http-exception";
 import prismaClients from './lib/prismaClient'
 import { response } from "./src/utils/response";
@@ -23,7 +23,7 @@ app.delete("/", (c) => c.text("DELETE /"));
 //  routes
 mail(app, "/mail");
 user(app, "/user");
-test(app, "/test");
+domain(app, "/domain");
 
 app.notFound((c) => {
   return c.text("Custom 404 Message", 404);
@@ -56,20 +56,31 @@ export default {
   ...app,
   async email(message: any, env: any, ctx: any) {
     const parser = new PostalMime();
-    const email = await parser.parse(message.raw);
-    console.log(message);
-    
-    console.log(env,ctx,888888);
-    
+    const email = await parser.parse(message.raw) as any;
+    console.log(message); 
+      
     try {
       const prisma = await prismaClients.fetch(env.DB)
-      
-      const sender = await prisma.user.findUnique({
-        where: { email: email.to as any },
-      })
 
-      console.log(sender,"查询发送者");
-     
+      // 发送人
+       const sender = email?.from?.address    
+      //  发送人名称
+      const senderName = email?.from?.name
+      // 发送标题
+      const subject = email.subject
+      // 邮件内容
+      const body = email.html
+      // 收件人
+      const toEmail = message.to || '[]'
+      console.log(sender, senderName, subject, body, toEmail,454444);
+
+      await prisma.email.create({
+        data: {
+          subject,
+          body,
+          recipientEmail:toEmail,
+        },
+      });
 
     } catch (err: any) {
       console.error('邮件处理失败:', {

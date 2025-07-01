@@ -6050,10 +6050,10 @@ var require_crypto = __commonJS({
   }
 });
 
-// .wrangler/tmp/bundle-jDBsIM/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-8bCqF1/middleware-loader.entry.ts
 init_modules_watch_stub();
 
-// .wrangler/tmp/bundle-jDBsIM/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-8bCqF1/middleware-insertion-facade.js
 init_modules_watch_stub();
 
 // main.ts
@@ -14513,11 +14513,50 @@ var user_default = /* @__PURE__ */ __name((app2, path) => {
   });
 }, "default");
 
-// src/test.ts
+// src/domain.ts
 init_modules_watch_stub();
-var test_default = /* @__PURE__ */ __name((app2, path) => {
-  app2.get(`${path}/test`, async (c) => {
-    return new Response(JSON.stringify([123]), { headers: { "content-type": "application/json" } });
+var domain_default = /* @__PURE__ */ __name((app2, path) => {
+  app2.post(`${path}/create`, async (c) => {
+    try {
+      const prisma = await prismaClient_default.fetch(c.env.DB);
+      const { name: name2 } = await c.req.json();
+      if (!name2 || typeof name2 !== "string" || name2.trim() === "") {
+        return response(c, null, "Domain name is required.", 400);
+      }
+      const domainRegex = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!domainRegex.test(name2)) {
+        return response(c, null, "Invalid domain name format.", 400);
+      }
+      const existingDomain = await prisma.domain.findFirst({
+        where: { name: name2 }
+      });
+      if (existingDomain) {
+        return response(c, null, `Domain '${name2}' already exists.`, 409);
+      }
+      const newDomain = await prisma.domain.create({
+        data: {
+          name: name2
+        }
+      });
+      return response(c, newDomain, "Domain created successfully.", 200);
+    } catch (error) {
+      console.error("Error creating domain:", error);
+      return response(c, null, "An error occurred while creating the domain.", 500);
+    }
+  });
+  app2.get(`${path}/list`, async (c) => {
+    try {
+      const prisma = await prismaClient_default.fetch(c.env.DB);
+      const allDomains = await prisma.domain.findMany({
+        orderBy: {
+          createdAt: "desc"
+        }
+      });
+      return response(c, allDomains, "Domains fetched successfully.");
+    } catch (error) {
+      console.error("Error fetching domains:", error);
+      return response(c, null, "An error occurred while fetching domains.", 500);
+    }
   });
 }, "default");
 
@@ -14530,7 +14569,7 @@ app.put("/", (c) => c.text("PUT /"));
 app.delete("/", (c) => c.text("DELETE /"));
 mail_default(app, "/mail");
 user_default(app, "/user");
-test_default(app, "/test");
+domain_default(app, "/domain");
 app.notFound((c) => {
   return c.text("Custom 404 Message", 404);
 });
@@ -14558,13 +14597,21 @@ var main_default = {
     const parser = new PostalMime();
     const email = await parser.parse(message.raw);
     console.log(message);
-    console.log(env, ctx, 888888);
     try {
       const prisma = await prismaClient_default.fetch(env.DB);
-      const sender = await prisma.user.findUnique({
-        where: { email: email.to }
+      const sender = email?.from?.address;
+      const senderName = email?.from?.name;
+      const subject = email.subject;
+      const body = email.html;
+      const toEmail = message.to || "[]";
+      console.log(sender, senderName, subject, body, toEmail, 454444);
+      await prisma.email.create({
+        data: {
+          subject,
+          body,
+          recipientEmail: toEmail
+        }
       });
-      console.log(sender, "\u67E5\u8BE2\u53D1\u9001\u8005");
     } catch (err) {
       console.error("\u90AE\u4EF6\u5904\u7406\u5931\u8D25:", {
         name: err.name,
@@ -14619,7 +14666,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-jDBsIM/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-8bCqF1/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -14652,7 +14699,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-jDBsIM/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-8bCqF1/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
