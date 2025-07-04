@@ -17,6 +17,7 @@ import Sent from "./pages/Sent";
 import Drafts from "./pages/Drafts";
 import Trash from "./pages/Trash";
 import NotFound from "./pages/NotFound";
+import MyEmail from './pages/MyEmail'
 
 // Layout
 import AppLayout from "./components/layout/AppLayout";
@@ -39,6 +40,7 @@ const App = () => (
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/inbox" element={<Inbox />} />
+                <Route path="/myEmail" element={<MyEmail />} />
                 <Route path="/starred" element={<Starred />} />
                 <Route path="/sent" element={<Sent />} />
                 <Route path="/drafts" element={<Drafts />} />

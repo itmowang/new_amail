@@ -1,549 +1,308 @@
-
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  ArchiveX, 
-  Check, 
-  ChevronDown, 
-  ChevronLeft, 
-  ChevronRight, 
-  MoreHorizontal, 
-  RefreshCw, 
-  Search, 
-  Star, 
-  Trash2,
-  Clock,
-  X,
-  Mail,
-  Paperclip,
-  Reply,
-  Forward,
+import { getAllMail } from "@/api/email";
+import { allEmail } from "@/api/userEmailDomain";
+import {
+    Loader2,
+    Check,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    MoreHorizontal,
+    RefreshCw,
+    Search,
+    ArchiveX,
+    Trash2,
+    Mail,
+    X,
+    Reply,
+    Forward,
+    Paperclip,
+    Star,
+    Clock,
 } from "lucide-react";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
+    Sheet,
+    SheetContent,
 } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// Mock email data
-const emails = [
-  {
-    id: "1",
-    sender: "Sarah Johnson",
-    email: "sarah.j@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-    subject: "Project Status Update",
-    excerpt: "Here's the latest on our current sprint progress. We've managed to complete most of the high priority tasks ahead of schedule.",
-    content: `<p>Hi Team,</p>
-      <p>I wanted to provide a quick update on our current sprint progress:</p>
-      <ul>
-        <li>Feature A: Completed ✅</li>
-        <li>Feature B: In progress (80% complete)</li>
-        <li>Bug fixes: All P0 issues resolved</li>
-      </ul>
-      <p>We're on track to complete all committed items before the deadline. Let me know if you have any questions or concerns.</p>
-      <p>Best regards,<br>Sarah</p>`,
-    time: "10:32 AM",
-    read: false,
-    starred: true,
-    hasAttachment: true,
-    labels: ["work"],
-    attachments: [
-      { name: "sprint-report.pdf", size: "1.2 MB", type: "pdf" },
-      { name: "progress-chart.png", size: "340 KB", type: "image" }
-    ]
-  },
-  {
-    id: "2",
-    sender: "Marketing Team",
-    email: "marketing@company.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marketing",
-    subject: "Meeting Rescheduled",
-    excerpt: "Due to some conflicts, we need to reschedule our weekly sync to Thursday at 2 PM instead of the usual Wednesday slot.",
-    content: `<p>Hello everyone,</p>
-      <p>Due to a scheduling conflict with the executive meeting, we need to move our regular marketing sync from Wednesday 1 PM to <strong>Thursday at 2 PM</strong> this week only.</p>
-      <p>Please update your calendars accordingly. The agenda remains the same, and we'll be focusing on the upcoming product launch campaign.</p>
-      <p>Regards,<br>Marketing Team</p>`,
-    time: "Yesterday",
-    read: true,
-    starred: false,
-    hasAttachment: false,
-    labels: ["work"],
-    attachments: []
-  },
-  {
-    id: "3",
-    sender: "Design Lab",
-    email: "designs@designlab.co",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Design",
-    subject: "New Design Concepts",
-    excerpt: "I've attached the latest mockups for the mobile dashboard redesign. Let me know your thoughts on the color scheme.",
-    content: `<p>Hey there,</p>
-      <p>I've completed the mockups for the mobile dashboard redesign as we discussed in our last meeting.</p>
-      <p>Key changes include:</p>
-      <ul>
-        <li>Simplified navigation</li>
-        <li>Enhanced data visualization components</li>
-        <li>New color scheme for better accessibility</li>
-        <li>Improved typography for readability on smaller screens</li>
-      </ul>
-      <p>Please take a look at the attached files and let me know if these align with what you were envisioning. I'm particularly interested in your feedback on the color scheme.</p>
-      <p>Thanks,<br>Design Team</p>`,
-    time: "Yesterday",
-    read: true,
-    starred: false,
-    hasAttachment: true,
-    labels: ["personal"],
-    attachments: [
-      { name: "dashboard-mobile-v1.fig", size: "4.7 MB", type: "figma" },
-      { name: "color-palette.pdf", size: "560 KB", type: "pdf" }
-    ]
-  },
-  {
-    id: "4",
-    sender: "Finance Department",
-    email: "finance@company.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Finance",
-    subject: "Q3 Revenue Report",
-    excerpt: "Please find attached our analysis of Q3 performance and forecast for the upcoming quarter. We've exceeded targets by 12%.",
-    content: `<p>Dear Management Team,</p>
-      <p>I'm pleased to share the Q3 revenue report and analysis with you. Here are some highlights:</p>
-      <ul>
-        <li>Total revenue: $4.2M (12% above target)</li>
-        <li>Cost reduction: 8% compared to Q2</li>
-        <li>Profit margin: Increased by 3 percentage points</li>
-      </ul>
-      <p>The attached report contains detailed breakdowns by department and product line, as well as our forecast for Q4.</p>
-      <p>Please review at your convenience and let me know if you have any questions.</p>
-      <p>Regards,<br>Finance Department</p>`,
-    time: "Jul 23",
-    read: true,
-    starred: true,
-    hasAttachment: true,
-    labels: ["important", "work"],
-    attachments: [
-      { name: "Q3-Revenue-Report.xlsx", size: "2.8 MB", type: "excel" },
-      { name: "Q3-Analysis.pdf", size: "1.5 MB", type: "pdf" }
-    ]
-  },
-  {
-    id: "5",
-    sender: "John Smith",
-    email: "john.s@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
-    subject: "Weekend Plans",
-    excerpt: "Are you free this weekend for a quick trip to the lake? We're planning to rent a boat and do some fishing.",
-    content: `<p>Hey!</p>
-      <p>A few of us are planning a quick trip to Lake Austin this weekend. We're thinking of renting a boat on Saturday around 11 AM and spending the afternoon on the water, maybe do some fishing and swimming.</p>
-      <p>Would you be interested in joining? We're planning to keep it small, just 5-6 people. Let me know if you'd like to come along so I can make the appropriate reservations.</p>
-      <p>Cheers,<br>John</p>`,
-    time: "Jul 22",
-    read: true,
-    starred: false,
-    hasAttachment: false,
-    labels: ["personal"],
-    attachments: []
-  },
-  {
-    id: "6",
-    sender: "Tech Support",
-    email: "support@company.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Support",
-    subject: "Your Support Ticket #45678",
-    excerpt: "We've resolved the issue with your account permissions. Please verify you can now access all required resources.",
-    content: `<p>Hello,</p>
-      <p>This is an update regarding your recent support ticket (#45678) about account permissions.</p>
-      <p>We've investigated the issue and found that there was an incorrect role assignment in the IAM settings. This has now been corrected, and you should have full access to all the resources you requested.</p>
-      <p>Please verify that you can now access everything you need, and let us know if you encounter any further issues.</p>
-      <p>Best regards,<br>IT Support Team</p>`,
-    time: "Jul 20",
-    read: true,
-    starred: false,
-    hasAttachment: false,
-    labels: ["work"],
-    attachments: []
-  },
-  {
-    id: "7",
-    sender: "Alex Wong",
-    email: "alex.w@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-    subject: "Coffee Catch-up?",
-    excerpt: "It's been a while since we last caught up. Are you available for coffee sometime next week? I'd love to hear what you've been working on.",
-    content: `<p>Hey there,</p>
-      <p>It's been a while since we last caught up properly! I've been meaning to reach out to see how things are going with your new project.</p>
-      <p>Would you be free for a coffee catch-up sometime next week? I'm pretty flexible on Tuesday and Thursday afternoons.</p>
-      <p>There's this new café that opened near the office that I've been wanting to try. Let me know what works for you!</p>
-      <p>Best,<br>Alex</p>`,
-    time: "Jul 18",
-    read: true,
-    starred: true,
-    hasAttachment: false,
-    labels: ["personal"],
-    attachments: []
-  },
-];
+// --- 1. 定义数据类型 ---
+
+// 用户自己的邮箱地址
+interface UserEmail {
+    id: string;
+    fullEmail: string;
+}
+
+// 单封邮件的数据，增加了 fromName 字段
+interface MailItem {
+    id: string;
+    fromName: string; // 从 body 解析出的发件人姓名
+    fromEmail: string; // 从 body 解析出的发件人邮箱
+    subject: string;
+    body: string;
+    createdAt: string;
+}
+
+// 分页信息
+interface Pagination {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+}
+
+
+// --- 2. 新增: 解析发件人信息的工具函数 ---
+const parseSenderInfo = (htmlBody: string): { fromName: string; fromEmail: string } => {
+    // 尝试用正则表达式从HTML中提取姓名和邮箱
+    const nameMatch = htmlBody.match(/<div class="businessCard_name"[^>]*>([^<]+)<\/div>/);
+    const emailMatch = htmlBody.match(/<div class="businessCard_mail"[^>]*>([^<]+)<\/div>/);
+
+    return {
+        fromName: nameMatch ? nameMatch[1] : "未知发件人", // 如果没匹配到，提供默认值
+        fromEmail: emailMatch ? emailMatch[1] : "未知邮箱",
+    };
+};
+
 
 const Inbox = () => {
-  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [selectedEmail, setSelectedEmail] = useState<typeof emails[0] | null>(null);
-  const [isEmailOpen, setIsEmailOpen] = useState(false);
-  
-  const toggleSelectEmail = (id: string) => {
-    if (selectedEmails.includes(id)) {
-      setSelectedEmails(selectedEmails.filter(emailId => emailId !== id));
-    } else {
-      setSelectedEmails([...selectedEmails, id]);
-    }
-  };
-  
-  const toggleSelectAll = () => {
-    if (selectedEmails.length === emails.length) {
-      setSelectedEmails([]);
-    } else {
-      setSelectedEmails(emails.map(email => email.id));
-    }
-  };
-  
-  const openEmail = (email: typeof emails[0]) => {
-    setSelectedEmail(email);
-    setIsEmailOpen(true);
-  };
-  
-  const closeEmail = () => {
-    setIsEmailOpen(false);
-  };
-  
-  return (
-    <div className="space-y-6 py-2">
-      <div className="flex flex-col space-y-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">Inbox</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        
-        <div className="relative">
-          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-opacity ${searchFocused ? "opacity-100" : "opacity-70"}`} />
-          <Input
-            type="search"
-            placeholder="Search emails..."
-            className="pl-10 h-10"
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-        </div>
-      </div>
-      
-      <Tabs defaultValue="all">
-        <TabsList className="mb-4">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="unread" className="flex gap-2">
-            Unread
-            <span className="bg-primary/20 text-primary text-xs px-2 rounded-full">
-              {emails.filter(e => !e.read).length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="starred">Starred</TabsTrigger>
-          <TabsTrigger value="important">Important</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="space-y-0">
-          <div className="flex gap-2 items-center py-2 px-1">
-            <Checkbox 
-              checked={selectedEmails.length === emails.length && emails.length > 0} 
-              onCheckedChange={toggleSelectAll}
-              className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-            />
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            
-            {selectedEmails.length > 0 ? (
-              <div className="flex items-center gap-1 flex-1">
-                <Button variant="ghost" size="icon">
-                  <ArchiveX className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Check className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground ml-2">
-                  {selectedEmails.length} selected
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4 text-xs text-muted-foreground ml-2">
-                <span>
-                  <span className="hidden sm:inline">Select messages to take action</span>
-                  <span className="sm:hidden">Select to act</span>
-                </span>
-              </div>
-            )}
-            
-            <div className="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
-              <span>1-{emails.length} of {emails.length}</span>
-              <div className="flex">
-                <Button variant="ghost" size="icon" disabled>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" disabled>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border rounded-md divide-y">
-            {emails.map((email) => (
-              <div 
-                key={email.id}
-                className={`group flex items-start gap-2 p-3 hover:bg-muted/50 transition-colors cursor-pointer ${!email.read ? "bg-primary/5" : ""}`}
-                onClick={() => openEmail(email)}
-              >
-                <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
-                  <Checkbox 
-                    checked={selectedEmails.includes(email.id)}
-                    onCheckedChange={() => toggleSelectEmail(email.id)}
-                    className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                  />
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-5 w-5 text-muted-foreground"
-                    onClick={() => {
-                      // Toggle star functionality would go here
-                    }}
-                  >
-                    <Star 
-                      className={`h-4 w-4 ${email.starred ? "fill-amber-400 text-amber-400" : ""}`} 
-                    />
-                  </Button>
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium truncate ${!email.read ? "text-primary font-semibold" : ""}`}>
-                        {email.sender}
-                      </span>
-                      {!email.read && (
-                        <span className="h-2 w-2 rounded-full bg-primary"></span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {email.hasAttachment && (
-                        <Paperclip className="h-3 w-3 text-muted-foreground" />
-                      )}
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">{email.time}</span>
-                    </div>
-                  </div>
-                  <div className={`mb-1 truncate ${!email.read ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-                    {email.subject}
-                  </div>
-                  <div className="text-sm text-muted-foreground truncate">
-                    {email.excerpt}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="unread">
-          <div className="py-8 text-center">
-            <Mail className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <h3 className="mt-4 text-lg font-medium">No unread emails</h3>
-            <p className="text-muted-foreground">You're all caught up!</p>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="starred">
-          <div className="border rounded-md divide-y">
-            {emails.filter(email => email.starred).map((email) => (
-              <div 
-                key={email.id}
-                className={`group flex items-start gap-2 p-3 hover:bg-muted/50 transition-colors cursor-pointer ${!email.read ? "bg-primary/5" : ""}`}
-                onClick={() => openEmail(email)}
-              >
-                <div className="flex items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
-                  <Checkbox 
-                    checked={selectedEmails.includes(email.id)}
-                    onCheckedChange={() => toggleSelectEmail(email.id)}
-                    className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                  />
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-5 w-5 text-muted-foreground"
-                  >
-                    <Star 
-                      className="h-4 w-4 fill-amber-400 text-amber-400" 
-                    />
-                  </Button>
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium truncate ${!email.read ? "text-primary font-semibold" : ""}`}>
-                        {email.sender}
-                      </span>
-                      {!email.read && (
-                        <span className="h-2 w-2 rounded-full bg-primary"></span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {email.hasAttachment && (
-                        <Paperclip className="h-3 w-3 text-muted-foreground" />
-                      )}
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">{email.time}</span>
-                    </div>
-                  </div>
-                  <div className={`mb-1 truncate ${!email.read ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-                    {email.subject}
-                  </div>
-                  <div className="text-sm text-muted-foreground truncate">
-                    {email.excerpt}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="important">
-          <div className="py-8 text-center">
-            <Mail className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <h3 className="mt-4 text-lg font-medium">No important emails</h3>
-            <p className="text-muted-foreground">Mark emails as important to see them here</p>
-          </div>
-        </TabsContent>
-      </Tabs>
+    const { toast } = useToast();
 
-      {/* Email detail sheet */}
-      <Sheet open={isEmailOpen} onOpenChange={setIsEmailOpen}>
-        <SheetContent className="w-full sm:max-w-3xl overflow-auto p-0">
-          <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b">
-            <div className="flex items-center justify-between p-4">
-              <Button variant="ghost" size="icon" onClick={closeEmail}>
-                <X className="h-4 w-4" />
-              </Button>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon">
-                  <ArchiveX className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Reply className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Forward className="h-4 w-4" />
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
+    // --- 3. 状态管理 ---
+    const [userEmails, setUserEmails] = useState<UserEmail[]>([]);
+    const [selectedUserEmailId, setSelectedUserEmailId] = useState<string | null>(null);
+    const [mailItems, setMailItems] = useState<MailItem[]>([]);
+    const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 15, total: 0, totalPages: 1 });
+    const [selectedMail, setSelectedMail] = useState<MailItem | null>(null);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [loading, setLoading] = useState({ userEmails: true, mail: true });
+
+    // --- 4. 数据获取逻辑 (核心改动) ---
+    const fetchMailForSelectedEmail = useCallback(async (emailId: string, page: number, pageSize: number) => {
+        setLoading(prev => ({ ...prev, mail: true }));
+        try {
+            const res = await getAllMail({
+                userEmailDomainId: emailId,
+                page: page,
+                pageSize: pageSize,
+            });
+
+            if (res.code === 200 && res.data) {
+                // 在这里处理返回的数据，解析发件人
+                const formattedMail = res.data.list.map((item: any): MailItem => {
+                    const senderInfo = parseSenderInfo(item.body);
+                    return {
+                        id: item.id,
+                        subject: item.subject,
+                        body: item.body,
+                        createdAt: item.createdAt,
+                        fromName: senderInfo.fromName,
+                        fromEmail: senderInfo.fromEmail,
+                    };
+                });
+
+                setMailItems(formattedMail);
+                setPagination({
+                    page: res.data.page,
+                    pageSize: res.data.pageSize,
+                    total: res.data.total,
+                    totalPages: Math.ceil(res.data.total / res.data.pageSize) || 1,
+                });
+            } else {
+                 toast({ title: "错误", description: `加载邮件失败: ${res.msg}`, variant: "destructive" });
+            }
+        } catch (error) {
+            toast({ title: "网络错误", description: "无法加载邮件。", variant: "destructive" });
+        } finally {
+            setLoading(prev => ({ ...prev, mail: false }));
+        }
+    }, [toast]);
+
+    // 初始化加载逻辑 (保持不变)
+    useEffect(() => {
+        const initialize = async () => {
+            setLoading({ userEmails: true, mail: true });
+            try {
+                const res = await allEmail({});
+                if (res.code === 200 && res.data && res.data.length > 0) {
+                    const fetchedUserEmails: UserEmail[] = res.data;
+                    setUserEmails(fetchedUserEmails);
+                    const firstEmailId = fetchedUserEmails[0].id;
+                    setSelectedUserEmailId(firstEmailId);
+                    await fetchMailForSelectedEmail(firstEmailId, 1, 15);
+                } else {
+                    setUserEmails([]);
+                    setMailItems([]);
+                    toast({ title: "提示", description: "您还没有创建任何邮箱地址。" });
+                }
+            } catch (error) {
+                toast({ title: "初始化失败", description: "无法加载您的邮箱列表。", variant: "destructive" });
+            } finally {
+                setLoading({ userEmails: false, mail: false });
+            }
+        };
+        initialize();
+    }, [fetchMailForSelectedEmail, toast]);
+
+    // --- 5. 事件处理 (保持不变) ---
+    const handleSelectUserEmail = (id: string) => {
+        if (id === selectedUserEmailId) return;
+        setSelectedUserEmailId(id);
+        setPagination(prev => ({ ...prev, page: 1 }));
+        fetchMailForSelectedEmail(id, 1, 15);
+    };
+
+    const handlePageChange = (direction: 'next' | 'prev') => {
+        const newPage = direction === 'next' ? pagination.page + 1 : pagination.page - 1;
+        if (selectedUserEmailId) {
+            setPagination(prev => ({ ...prev, page: newPage }));
+            fetchMailForSelectedEmail(selectedUserEmailId, newPage, pagination.pageSize);
+        }
+    };
+    
+    const openMail = (mail: MailItem) => {
+        setSelectedMail(mail);
+        setIsSheetOpen(true);
+    };
+    
+    const currentEmailName = userEmails.find(e => e.id === selectedUserEmailId)?.fullEmail || "选择您的邮箱";
+
+    // --- 6. JSX 渲染 (更新显示逻辑) ---
+    return (
+        <div className="space-y-4 py-2">
+            {/* 页面头部和邮箱选择器 */}
+            <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-3xl font-bold tracking-tight">收件箱</h1>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="min-w-[220px] justify-between">
+                                {loading.userEmails ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>{currentEmailName}</span>}
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56">
+                            <DropdownMenuLabel>我的邮箱地址</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {userEmails.map(email => (
+                                <DropdownMenuItem key={email.id} onSelect={() => handleSelectUserEmail(email.id)}>
+                                    <Mail className="mr-2 h-4 w-4" />
+                                    <span>{email.fullEmail}</span>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => selectedUserEmailId && fetchMailForSelectedEmail(selectedUserEmailId, pagination.page, pagination.pageSize)} disabled={loading.mail}>
+                        {loading.mail ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Mark as unread</DropdownMenuItem>
-                    <DropdownMenuItem>Move to folder</DropdownMenuItem>
-                    <DropdownMenuItem>Print</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                </div>
             </div>
-          </div>
-          
-          {selectedEmail && (
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-6">{selectedEmail.subject}</h1>
-              
-              <div className="flex gap-4 mb-6">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={selectedEmail.avatar} />
-                  <AvatarFallback>{selectedEmail.sender.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1">
-                    <div className="font-semibold">{selectedEmail.sender}</div>
-                    <div className="flex items-center text-sm text-muted-foreground gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{selectedEmail.time}</span>
+
+            {/* 搜索框 */}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input type="search" placeholder="搜索邮件..." className="pl-10 h-10" />
+            </div>
+
+            {/* 邮件列表 */}
+            <Tabs defaultValue="all">
+                <TabsList className="mb-4"><TabsTrigger value="all">全部</TabsTrigger></TabsList>
+                <TabsContent value="all" className="space-y-0">
+                    {/* 工具栏和分页 */}
+                    <div className="flex gap-2 items-center py-2 px-1">
+                        <Checkbox disabled /><ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        <div className="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
+                            <span>{pagination.total > 0 ? `${(pagination.page - 1) * pagination.pageSize + 1}-${Math.min(pagination.page * pagination.pageSize, pagination.total)}` : 0} of {pagination.total}</span>
+                            <div className="flex">
+                                <Button variant="ghost" size="icon" onClick={() => handlePageChange('prev')} disabled={pagination.page <= 1 || loading.mail}><ChevronLeft className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => handlePageChange('next')} disabled={pagination.page >= pagination.totalPages || loading.mail}><ChevronRight className="h-4 w-4" /></Button>
+                            </div>
+                        </div>
                     </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground flex flex-wrap gap-1">
-                    <span>{selectedEmail.email}</span>
-                    <span>to me</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="prose dark:prose-invert max-w-none mb-8" 
-                   dangerouslySetInnerHTML={{ __html: selectedEmail.content }} />
-              
-              {selectedEmail.hasAttachment && selectedEmail.attachments.length > 0 && (
-                <div className="border rounded-lg p-4 space-y-4">
-                  <h3 className="text-sm font-medium">Attachments ({selectedEmail.attachments.length})</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {selectedEmail.attachments.map((attachment, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors">
-                        <div className="h-10 w-10 bg-muted rounded flex items-center justify-center text-muted-foreground">
-                          {attachment.type === "pdf" ? "PDF" : 
-                            attachment.type === "excel" ? "XLS" : 
-                            attachment.type === "image" ? "IMG" : 
-                            attachment.type === "figma" ? "FIG" : 
-                            "DOC"}
+                    {/* 邮件列表容器 */}
+                    <div className="border rounded-md divide-y min-h-[300px]">
+                        {loading.mail ? (
+                            <div className="flex justify-center items-center h-full min-h-[300px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                        ) : mailItems.length > 0 ? (
+                            mailItems.map((mail) => (
+                                <div key={mail.id} className="group flex items-start gap-2 p-3 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => openMail(mail)}>
+                                    <div className="flex items-center gap-2 pt-1"><Checkbox disabled onClick={(e) => e.stopPropagation()} /></div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start mb-1">
+                                            {/* 使用解析出的 fromName */}
+                                            <span className="font-medium truncate text-primary">{mail.fromName}</span>
+                                            <span className="text-xs text-muted-foreground whitespace-nowrap">{new Date(mail.createdAt).toLocaleString()}</span>
+                                        </div>
+                                        <div className="mb-1 truncate font-medium text-foreground">{mail.subject}</div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex flex-col justify-center items-center h-full min-h-[300px]">
+                                <Mail className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                                <h3 className="mt-4 text-lg font-medium">收件箱为空</h3>
+                                <p className="text-muted-foreground">此邮箱还没有收到任何邮件。</p>
+                            </div>
+                        )}
+                    </div>
+                </TabsContent>
+            </Tabs>
+
+            {/* 邮件详情页 */}
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetContent className="w-full sm:max-w-3xl overflow-auto p-0">
+                    <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b p-4 flex items-center justify-between">
+                        <Button variant="ghost" size="icon" onClick={() => setIsSheetOpen(false)}><X className="h-4 w-4" /></Button>
+                        <div className="flex items-center gap-1">
+                           <Button variant="ghost" size="icon"><ArchiveX className="h-4 w-4" /></Button>
+                           <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{attachment.name}</p>
-                          <p className="text-xs text-muted-foreground">{attachment.size}</p>
+                    </div>
+                    {selectedMail && (
+                        <div className="p-6">
+                            <h1 className="text-2xl font-bold mb-6">{selectedMail.subject}</h1>
+                            <div className="flex gap-4 mb-6">
+                                <Avatar className="h-10 w-10">
+                                    {/* 使用解析出的 fromName */}
+                                    <AvatarFallback>{selectedMail.fromName.charAt(0).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    {/* 使用解析出的 fromName 和 fromEmail */}
+                                    <div className="font-semibold">{selectedMail.fromName}</div>
+                                    <div className="text-sm text-muted-foreground">{selectedMail.fromEmail}</div>
+                                    <div className="text-sm text-muted-foreground mt-1">{new Date(selectedMail.createdAt).toLocaleString()}</div>
+                                </div>
+                            </div>
+                            <div
+                                className="prose dark:prose-invert max-w-none"
+                                dangerouslySetInnerHTML={{ __html: selectedMail.body }}
+                            />
+                             <div className="mt-8 flex gap-2">
+                                <Button className="gap-2"><Reply className="h-4 w-4" />回复</Button>
+                                <Button variant="outline" className="gap-2"><Forward className="h-4 w-4" />转发</Button>
+                            </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <div className="mt-8 flex gap-2">
-                <Button className="gap-2">
-                  <Reply className="h-4 w-4" />
-                  Reply
-                </Button>
-                <Button variant="outline" className="gap-2">
-                  <Forward className="h-4 w-4" />
-                  Forward
-                </Button>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
+                    )}
+                </SheetContent>
+            </Sheet>
+        </div>
+    );
 };
 
 export default Inbox;

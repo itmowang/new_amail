@@ -3,12 +3,12 @@
 // export dynamically through wrangler, or we can potentially let users directly
 // add them as a sort of "plugin" system.
 
-import ENTRY, { __INTERNAL_WRANGLER_MIDDLEWARE__ } from "E:\\dev\\mw-amail\\packages\\workers-new\\.wrangler\\tmp\\bundle-8bCqF1\\middleware-insertion-facade.js";
+import ENTRY, { __INTERNAL_WRANGLER_MIDDLEWARE__ } from "E:\\dev\\mw-amail\\packages\\workers-new\\.wrangler\\tmp\\bundle-isARAp\\middleware-insertion-facade.js";
 import { __facade_invoke__, __facade_register__, Dispatcher } from "E:\\dev\\mw-amail\\node_modules\\.pnpm\\wrangler@4.22.0\\node_modules\\wrangler\\templates\\middleware\\common.ts";
-import type { WorkerEntrypointConstructor } from "E:\\dev\\mw-amail\\packages\\workers-new\\.wrangler\\tmp\\bundle-8bCqF1\\middleware-insertion-facade.js";
+import type { WorkerEntrypointConstructor } from "E:\\dev\\mw-amail\\packages\\workers-new\\.wrangler\\tmp\\bundle-isARAp\\middleware-insertion-facade.js";
 
 // Preserve all the exports from the worker
-export * from "E:\\dev\\mw-amail\\packages\\workers-new\\.wrangler\\tmp\\bundle-8bCqF1\\middleware-insertion-facade.js";
+export * from "E:\\dev\\mw-amail\\packages\\workers-new\\.wrangler\\tmp\\bundle-isARAp\\middleware-insertion-facade.js";
 
 class __Facade_ScheduledController__ implements ScheduledController {
 	readonly #noRetry: ScheduledController["noRetry"];

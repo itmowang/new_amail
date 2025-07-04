@@ -6050,10 +6050,10 @@ var require_crypto = __commonJS({
   }
 });
 
-// .wrangler/tmp/bundle-8bCqF1/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-isARAp/middleware-loader.entry.ts
 init_modules_watch_stub();
 
-// .wrangler/tmp/bundle-8bCqF1/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-isARAp/middleware-insertion-facade.js
 init_modules_watch_stub();
 
 // main.ts
@@ -12137,49 +12137,6 @@ var prismaClients = {
 };
 var prismaClient_default = prismaClients;
 
-// src/mail.ts
-var mail_default = /* @__PURE__ */ __name((app2, path) => {
-  app2.get(`${path}/refetch`, async (c) => {
-    const { name: name2 } = c.req.query();
-    const inboxJSONString = await c.env.amailkv.get(name2) || "[]";
-    const inboxJSON = JSON.parse(inboxJSONString);
-    inboxJSON.reverse();
-    return new Response(JSON.stringify(inboxJSON), { headers: { "content-type": "application/json" } });
-  });
-  app2.get(`${path}/all_mail`, async (c) => {
-    const prisma = await prismaClient_default.fetch(c.env.DB);
-    const query = c.req.query();
-    const page = parseInt(query.page || "1", 10);
-    const pageSize = parseInt(query.pageSize || "10", 10);
-    const skip2 = (page - 1) * pageSize;
-    try {
-      const [emails, total] = await Promise.all([
-        prisma.email.findMany({
-          orderBy: { createdAt: "desc" },
-          skip: skip2,
-          take: pageSize
-        }),
-        prisma.email.count()
-      ]);
-      return c.json({
-        data: emails,
-        pagination: {
-          page,
-          pageSize,
-          total,
-          totalPages: Math.ceil(total / pageSize)
-        }
-      });
-    } catch (err) {
-      console.error("Failed to fetch emails:", err);
-      return c.json({ error: `Failed to fetch emails${JSON.stringify(c)}` }, 500);
-    }
-  });
-}, "default");
-
-// src/user.ts
-init_modules_watch_stub();
-
 // ../../node_modules/.pnpm/hono@4.7.10/node_modules/hono/dist/middleware/jwt/index.js
 init_modules_watch_stub();
 
@@ -12708,6 +12665,86 @@ var Jwt = { sign, verify, decode, verifyFromJwks };
 var verify2 = Jwt.verify;
 var decode2 = Jwt.decode;
 var sign2 = Jwt.sign;
+
+// src/mail.ts
+var JWT_SECRET = "your-super-secret-key";
+var mail_default = /* @__PURE__ */ __name((app2, path) => {
+  app2.get(`${path}/all_mail`, async (c) => {
+    try {
+      const authHeader = c.req.header("Authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return c.json({ code: 401, msg: "\u672A\u63D0\u4F9B\u6709\u6548\u7684\u8BA4\u8BC1\u4EE4\u724C" }, 401);
+      }
+      const token = authHeader.substring(7);
+      const decodedPayload = await verify2(token, JWT_SECRET);
+      const userId = decodedPayload.id;
+      if (!userId) {
+        return c.json({ code: 401, msg: "\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" }, 401);
+      }
+      const { page, pageSize, userEmailDomainId } = c.req.query();
+      if (!userEmailDomainId) {
+        return c.json({ code: 400, msg: "\u7F3A\u5C11\u5FC5\u9700\u7684\u53C2\u6570: userEmailDomainId" }, 400);
+      }
+      const pageNum = parseInt(page || "1", 10);
+      const pageSizeNum = parseInt(pageSize || "10", 10);
+      const prisma = await prismaClient_default.fetch(c.env.DB);
+      const ownedEmailAddress = await prisma.userEmailDomain.findFirst({
+        where: {
+          id: userEmailDomainId,
+          userId
+        }
+      });
+      if (!ownedEmailAddress) {
+        return c.json({ code: 404, msg: "\u6307\u5B9A\u7684\u90AE\u7BB1\u5730\u5740\u4E0D\u5B58\u5728\u6216\u60A8\u65E0\u6743\u8BBF\u95EE" }, 404);
+      }
+      const domainInfo = await prisma.domain.findUnique({
+        where: {
+          id: ownedEmailAddress.domainId
+        }
+      });
+      if (!domainInfo) {
+        return c.json({ code: 404, msg: "\u5173\u8054\u7684\u57DF\u540D\u4FE1\u606F\u4E0D\u5B58\u5728" }, 404);
+      }
+      const fullEmailAddress = `${ownedEmailAddress.emailName}@${domainInfo.name}`;
+      const whereClause = {
+        recipientEmail: fullEmailAddress
+        // 查询条件变为 recipientEmail 字段
+      };
+      const [emails, total] = await prisma.$transaction([
+        prisma.email.findMany({
+          where: whereClause,
+          orderBy: {
+            createdAt: "desc"
+          },
+          skip: (pageNum - 1) * pageSizeNum,
+          take: pageSizeNum
+        }),
+        prisma.email.count({
+          where: whereClause
+        })
+      ]);
+      return c.json({
+        code: 200,
+        msg: "\u90AE\u4EF6\u5217\u8868\u67E5\u8BE2\u6210\u529F",
+        data: {
+          list: emails,
+          total,
+          page: pageNum,
+          pageSize: pageSizeNum
+        }
+      });
+    } catch (error) {
+      console.error("\u67E5\u8BE2\u90AE\u4EF6\u5217\u8868\u65F6\u53D1\u751F\u9519\u8BEF:", error);
+      if (error.name === "JwtTokenInvalid" || error.name === "JwtTokenExpired") {
+        return c.json({ code: 401, msg: "\u8BA4\u8BC1\u5931\u8D25\uFF1A\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" }, 401);
+      }
+      return c.json({ code: 500, msg: "\u670D\u52A1\u5668\u5185\u90E8\u9519\u8BEF\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" }, 500);
+    }
+  });
+}, "default");
+
+// src/user.ts
+init_modules_watch_stub();
 
 // ../../node_modules/.pnpm/bcryptjs@3.0.2/node_modules/bcryptjs/index.js
 init_modules_watch_stub();
@@ -14470,7 +14507,7 @@ function response(c, data = null, msg = "ok", code = 200) {
 __name(response, "response");
 
 // src/user.ts
-var JWT_SECRET = "your-super-secret-key";
+var JWT_SECRET2 = "your-super-secret-key";
 var user_default = /* @__PURE__ */ __name((app2, path) => {
   app2.post(`${path}/register`, async (c) => {
     try {
@@ -14505,7 +14542,7 @@ var user_default = /* @__PURE__ */ __name((app2, path) => {
       if (!isPasswordValid) {
         return response(c, null, "Invalid password.", 401);
       }
-      const token = await sign2({ id: user.id, email: user.email, name: user.name }, JWT_SECRET);
+      const token = await sign2({ id: user.id, email: user.email, name: user.name }, JWT_SECRET2);
       return response(c, { token, user: { id: user.id, email: user.email, name: user.name } }, "Login successful.");
     } catch (error) {
       return response(c, null, "An error occurred during login.", 500);
@@ -14560,6 +14597,186 @@ var domain_default = /* @__PURE__ */ __name((app2, path) => {
   });
 }, "default");
 
+// src/userEmailDomain.ts
+init_modules_watch_stub();
+var JWT_SECRET3 = "your-super-secret-key";
+var userEmailDomain_default = /* @__PURE__ */ __name((app2, path) => {
+  app2.post(`${path}/create`, async (c) => {
+    try {
+      const authHeader = c.req.header("Authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return c.json({ code: 401, msg: "\u672A\u63D0\u4F9B\u6709\u6548\u7684\u8BA4\u8BC1\u4EE4\u724C" }, 401);
+      }
+      const token = authHeader.substring(7);
+      const decodedPayload = await verify2(token, JWT_SECRET3);
+      const userId = decodedPayload.id;
+      if (!userId) {
+        return c.json({ code: 401, msg: "\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" }, 401);
+      }
+      const { domainId, emailName } = await c.req.json();
+      if (!domainId || !emailName) {
+        return c.json({ code: 400, msg: "\u8BF7\u6C42\u53C2\u6570\u4E0D\u5B8C\u6574\uFF0CdomainId \u548C emailName \u662F\u5FC5\u586B\u9879" }, 400);
+      }
+      const emailNameRegex = /^[a-zA-Z0-9_.-]+$/;
+      if (!emailNameRegex.test(emailName)) {
+        return c.json({ code: 400, msg: "\u90AE\u7BB1\u540D\u79F0\u5305\u542B\u65E0\u6548\u5B57\u7B26" }, 400);
+      }
+      const prisma = await prismaClient_default.fetch(c.env.DB);
+      const domain = await prisma.domain.findUnique({
+        where: { id: domainId }
+      });
+      if (!domain) {
+        return c.json({ code: 404, msg: "\u6240\u9009\u7684\u57DF\u540D\u4E0D\u5B58\u5728" }, 404);
+      }
+      const existingEmail = await prisma.userEmailDomain.findFirst({
+        where: {
+          emailName: {
+            equals: emailName
+            // mode: 'insensitive' // 如果需要不区分大小写，可以开启此选项 (SQLite支持)
+          },
+          domainId
+        }
+      });
+      if (existingEmail) {
+        return c.json({ code: 409, msg: `\u90AE\u7BB1\u5730\u5740 ${emailName}@${domain.name} \u5DF2\u88AB\u5360\u7528` }, 409);
+      }
+      const newUserEmail = await prisma.userEmailDomain.create({
+        data: {
+          userId,
+          domainId,
+          emailName
+        }
+      });
+      return c.json({
+        code: 201,
+        // 201 Created 表示资源创建成功
+        msg: "\u90AE\u7BB1\u8D26\u6237\u521B\u5EFA\u6210\u529F",
+        data: {
+          id: newUserEmail.id,
+          fullEmail: `${newUserEmail.emailName}@${domain.name}`,
+          createdAt: newUserEmail.createdAt
+        }
+      }, 201);
+    } catch (error) {
+      console.error("\u521B\u5EFA\u90AE\u7BB1\u65F6\u53D1\u751F\u9519\u8BEF:", error);
+      if (error.name === "JwtTokenInvalid" || error.name === "JwtTokenExpired") {
+        return c.json({ code: 401, msg: "\u8BA4\u8BC1\u5931\u8D25\uFF1A\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" }, 401);
+      }
+      return c.json({ code: 500, msg: "\u670D\u52A1\u5668\u5185\u90E8\u9519\u8BEF\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" }, 500);
+    }
+  });
+  app2.get(`${path}/list`, async (c) => {
+    try {
+      const authHeader = c.req.header("Authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return c.json({ code: 401, msg: "\u672A\u63D0\u4F9B\u6709\u6548\u7684\u8BA4\u8BC1\u4EE4\u724C" }, 401);
+      }
+      const token = authHeader.substring(7);
+      const decodedPayload = await verify2(token, JWT_SECRET3);
+      const userId = decodedPayload.id;
+      if (!userId) {
+        return c.json({ code: 401, msg: "\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" }, 401);
+      }
+      const prisma = await prismaClient_default.fetch(c.env.DB);
+      const userEmails = await prisma.userEmailDomain.findMany({
+        where: {
+          userId
+        },
+        orderBy: {
+          createdAt: "desc"
+        }
+      });
+      if (userEmails.length === 0) {
+        return c.json({
+          code: 200,
+          msg: "\u90AE\u7BB1\u5217\u8868\u67E5\u8BE2\u6210\u529F",
+          data: []
+        });
+      }
+      const domainIds = [...new Set(userEmails.map((email) => email.domainId))];
+      const domains = await prisma.domain.findMany({
+        where: {
+          id: {
+            in: domainIds
+            // 使用 in 查询一次性获取所有相关的域名
+          }
+        }
+      });
+      const domainMap = new Map(domains.map((domain) => [domain.id, domain.name]));
+      const formattedData = userEmails.map((email) => {
+        const domainName = domainMap.get(email.domainId) || null;
+        return {
+          ...email,
+          // 保留 UserEmailDomain 的所有原始字段
+          domainName,
+          // 新增域名名称字段
+          fullEmail: `${email.emailName}@${domainName}`
+          // 额外提供一个拼接好的完整邮箱地址
+        };
+      });
+      return c.json({
+        code: 200,
+        msg: "\u90AE\u7BB1\u5217\u8868\u67E5\u8BE2\u6210\u529F",
+        data: formattedData
+      });
+    } catch (error) {
+      console.error("\u67E5\u8BE2\u90AE\u7BB1\u5217\u8868\u65F6\u53D1\u751F\u9519\u8BEF:", error);
+      if (error.name === "JwtTokenInvalid" || error.name === "JwtTokenExpired") {
+        return c.json({ code: 401, msg: "\u8BA4\u8BC1\u5931\u8D25\uFF1A\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" }, 401);
+      }
+      return c.json({ code: 500, msg: "\u670D\u52A1\u5668\u5185\u90E8\u9519\u8BEF\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" }, 500);
+    }
+  });
+  app2.post(`${path}/delete`, async (c) => {
+    try {
+      const authHeader = c.req.header("Authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return c.json({ code: 401, msg: "\u672A\u63D0\u4F9B\u6709\u6548\u7684\u8BA4\u8BC1\u4EE4\u724C" }, 401);
+      }
+      const token = authHeader.substring(7);
+      const decodedPayload = await verify2(token, JWT_SECRET3);
+      const userId = decodedPayload.id;
+      if (!userId) {
+        return c.json({ code: 401, msg: "\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" }, 401);
+      }
+      const { id: emailIdToDelete } = await c.req.json();
+      if (!emailIdToDelete) {
+        return c.json({ code: 400, msg: "\u8BF7\u6C42\u4F53\u4E2D\u7F3A\u5C11\u90AE\u7BB1ID (id)" }, 400);
+      }
+      const prisma = await prismaClient_default.fetch(c.env.DB);
+      const emailRecord = await prisma.userEmailDomain.findUnique({
+        where: {
+          id: emailIdToDelete
+        }
+      });
+      if (!emailRecord) {
+        return c.json({ code: 404, msg: "\u8981\u5220\u9664\u7684\u90AE\u7BB1\u8D26\u53F7\u4E0D\u5B58\u5728" }, 404);
+      }
+      if (emailRecord.userId !== userId) {
+        return c.json({ code: 403, msg: "\u65E0\u6743\u5220\u9664\u6B64\u90AE\u7BB1\u8D26\u53F7" }, 403);
+      }
+      await prisma.userEmailDomain.delete({
+        where: {
+          id: emailIdToDelete
+        }
+      });
+      return c.json({ code: 200, msg: "\u90AE\u7BB1\u8D26\u53F7\u5220\u9664\u6210\u529F" });
+    } catch (error) {
+      console.error("\u5220\u9664\u90AE\u7BB1\u65F6\u53D1\u751F\u9519\u8BEF:", error);
+      if (error.name === "JwtTokenInvalid" || error.name === "JwtTokenExpired") {
+        return c.json({ code: 401, msg: "\u8BA4\u8BC1\u5931\u8D25\uFF1A\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F" }, 401);
+      }
+      if (error instanceof SyntaxError) {
+        return c.json({ code: 400, msg: "\u65E0\u6548\u7684JSON\u8BF7\u6C42\u4F53" }, 400);
+      }
+      if (error.code === "P2025") {
+        return c.json({ code: 404, msg: "\u8981\u5220\u9664\u7684\u8D44\u6E90\u4E0D\u5B58\u5728" }, 404);
+      }
+      return c.json({ code: 500, msg: "\u670D\u52A1\u5668\u5185\u90E8\u9519\u8BEF\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" }, 500);
+    }
+  });
+}, "default");
+
 // main.ts
 var app = new Hono2().basePath("/api");
 app.use("*", cors());
@@ -14570,6 +14787,7 @@ app.delete("/", (c) => c.text("DELETE /"));
 mail_default(app, "/mail");
 user_default(app, "/user");
 domain_default(app, "/domain");
+userEmailDomain_default(app, "/userEmailDomain");
 app.notFound((c) => {
   return c.text("Custom 404 Message", 404);
 });
@@ -14666,7 +14884,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-8bCqF1/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-isARAp/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -14699,7 +14917,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-8bCqF1/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-isARAp/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

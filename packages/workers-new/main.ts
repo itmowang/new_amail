@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import mail from "./src/mail";
 import user from './src/user';
-import domain from './src/domain'
+import domain from './src/domain';
+import userEmailDomain from "./src/userEmailDomain";
 import { HTTPException } from "hono/http-exception";
 import prismaClients from './lib/prismaClient'
 import { response } from "./src/utils/response";
@@ -24,6 +25,7 @@ app.delete("/", (c) => c.text("DELETE /"));
 mail(app, "/mail");
 user(app, "/user");
 domain(app, "/domain");
+userEmailDomain(app, "/userEmailDomain");
 
 app.notFound((c) => {
   return c.text("Custom 404 Message", 404);
@@ -61,7 +63,6 @@ export default {
       
     try {
       const prisma = await prismaClients.fetch(env.DB)
-
       // 发送人
        const sender = email?.from?.address    
       //  发送人名称

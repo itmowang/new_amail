@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 
 const mainNavItems = [
   { title: "Dashboard", icon: Home, to: "/dashboard", count: null },
+  { title: "My Email", icon: Inbox, to: "/myEmail", count: null },
   { title: "Inbox", icon: Inbox, to: "/inbox", count: 12 },
   { title: "Starred", icon: Star, to: "/starred", count: 3 },
   { title: "Sent", icon: Send, to: "/sent", count: null },

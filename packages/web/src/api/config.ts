@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios' 
- 
+import { toast } from 'sonner'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
  
 const axiosInstance = axios.create({
@@ -10,6 +11,10 @@ const axiosInstance = axios.create({
   
 axiosInstance.interceptors.request.use((config) => {
   // 在请求发送之前做一些处理，比如添加token等
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
  
   return config
 })
@@ -20,6 +25,7 @@ axiosInstance.interceptors.response.use(
     return response
   },
   (error) => {
+    toast.error(`失败错误,${error.response.data.msg}`);
     if (error.response.status === 400) {
       
       return Promise.reject({ message: error.response.data })
@@ -32,6 +38,10 @@ axiosInstance.interceptors.response.use(
       return Promise.reject({ message: error.response.data })
     }
     if (error.response.status === 404) {
+      
+      return Promise.reject({ message: error.response.data })
+    }
+    if (error.response.status === 409) {
       
       return Promise.reject({ message: error.response.data })
     }
