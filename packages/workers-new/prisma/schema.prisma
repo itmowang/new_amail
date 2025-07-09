@@ -4,44 +4,73 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite" // d1 is sql base database
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(uuid()) // 用户id
-  email     String   @unique // 用户邮箱
-  name      String? // 用户昵称
-  password  String // 用户密码 
-  createdAt DateTime @default(now()) // 创建时间
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String
+  createdAt DateTime @default(now())
+
+  // 关系字段
+  userEmailDomains UserEmailDomain[]
+  points           Points[]
+  // 每个用户拥有一个发信箱 (一对一)
+  outbox           Outbox?
+}
+
+// 新增的发信箱模型
+model Outbox {
+  id     String @id @default(uuid())
+  userId String @unique // 确保一个用户只有一个发信箱
+  user   User   @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  // 关系字段: 一个发信箱包含多封已发送的邮件 (一对多)
+  sentEmails Email[]
+  @@index([userId])
 }
 
 model Email {
-  id             String   @id @default(uuid()) // 邮件id
-  subject        String // 邮件主题
-  body           String // 邮件内容
-  recipientEmail String // 收信人邮箱
-  createdAt      DateTime @default(now()) //邮件创建时间
+  id             String   @id @default(uuid())
+  subject        String
+  body           String
+  recipientEmail String
+  senderEmail    String // 发信人邮箱地址 (仍保留用于显示)
+  createdAt      DateTime @default(now())
+  outboxId String
+  outbox   Outbox @relation(fields: [outboxId], references: [id])
+  @@index([outboxId])
 }
 
 model Domain {
-  id        String   @id @default(uuid()) // 域名id
-  name      String // 域名地址 例如 example.com
-  createdAt DateTime @default(now()) // 域名创建时间
+  id               String            @id @default(uuid())
+  name             String            @unique
+  createdAt        DateTime          @default(now())
+  userEmailDomains UserEmailDomain[]
 }
 
 model UserEmailDomain {
-  id        String   @id @default(uuid()) //  用户的邮箱
-  userId    String // 用户id
-  domainId  String // 域名id
-  emailName String // 邮箱Name   例如Alice  到时候可以拼接Domain的name 形成完整的邮箱 例如 Alice@example.com
-  createdAt DateTime @default(now()) // 创建时间
+  id        String   @id @default(uuid())
+  userId    String
+  domainId  String
+  emailName String
+  createdAt DateTime @default(now())
+  user   User   @relation(fields: [userId], references: [id])
+  domain Domain @relation(fields: [domainId], references: [id])
+  @@unique([emailName, domainId])
+  @@index([userId])
+  @@index([domainId])
 }
 
 model Points {
-  id        String   @id @default(uuid()) // id
-  userId    String // 用户id
-  points    Int // 积分
-  createdAt DateTime @default(now()) // 创建时间
-  updatedAt DateTime @default(now()) // 更新时间
+  id        String   @id @default(uuid())
+  userId    String
+  points    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id])
+  @@index([userId])
 }
